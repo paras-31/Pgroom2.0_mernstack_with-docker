@@ -1,0 +1,17 @@
+/* Custom styles for form elements */
+
+/* Make required asterisk red */
+.required-asterisk {
+  color: #e11d48; /* Red color */
+}
+
+/* Remove number input spinners */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
+}

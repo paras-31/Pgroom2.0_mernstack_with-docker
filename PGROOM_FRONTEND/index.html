@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Property Hub</title>
+    <!-- Favicon -->
+    <link rel="icon" href="logo.png" type="image/x-icon" />
+    <!-- Google Maps API for address search -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBfz2_rIeioFOGFL_tjSaGreU6JtY1P2iw&libraries=places" async defer></script>
+    <!-- Razorpay SDK for payment processing -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Prevent theme flash -->
+    <script>
+      // On page load, check localStorage for theme preference
+      (function() {
+        try {
+          const storedTheme = localStorage.getItem('property-hub-theme');
+          if (storedTheme === 'dark' ||
+             (storedTheme === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          console.error('Error accessing localStorage for theme:', e);
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

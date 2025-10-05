@@ -1,0 +1,29 @@
+# ---------- Base ----------
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy Prisma schema and app code
+COPY prisma ./prisma
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Expose Prisma Studio port
+EXPOSE 5555
+
+# ---------- Runtime ----------
+# Run migrations then start Prisma Studio
+CMD sh -c "\
+    echo 'Running Prisma migrations...' && \
+    # npx prisma migrate deploy && \
+    echo 'Starting Prisma Studio...' && \
+    npx prisma studio --port 5555 --browser=none \
+"

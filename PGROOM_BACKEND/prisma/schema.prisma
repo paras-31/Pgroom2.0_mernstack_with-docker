@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  firstName      String           @db.VarChar
+  lastName       String           @db.VarChar
+  mobileNo       String           @unique @db.VarChar
+  address        String?          @db.VarChar
+  stateId        Int
+  cityId         Int
+  status         Status
+  email          String           @unique @db.VarChar
+  password       String           @db.VarChar
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  payments       Payment[]        @relation("TenantPayments")
+  tenant         Tenant[]
+  city           City             @relation(fields: [cityId], references: [id])
+  state          State            @relation(fields: [stateId], references: [id])
+  userProperties UserProperties[]
+  userRoleLink   UserRoleLink[]
+}
+
+model UserRole {
+  id           Int            @id @default(autoincrement())
+  roles        Roles
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  userRoleLink UserRoleLink[]
+}
+
+model UserRoleLink {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  roleId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userRole  UserRole @relation(fields: [roleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model UserProperties {
+  id              Int            @id @default(autoincrement())
+  userId          Int
+  stateId         Int
+  cityId          Int
+  propertyName    String         @db.VarChar
+  propertyImage   String         @db.VarChar
+  propertyContact String         @db.VarChar
+  propertyAddress String         @db.VarChar
+  status          PropertyStatus
+  createdAt       DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime       @updatedAt @db.Timestamp(6)
+  payments        Payment[]      @relation("PropertyPayments")
+  rooms           Rooms[]
+  tenant          Tenant[]
+  city            City           @relation(fields: [cityId], references: [id])
+  state           State          @relation(fields: [stateId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+}
+
+model Rooms {
+  id             Int            @id @default(autoincrement())
+  propertyId     Int
+  roomNo         Int
+  roomImage      Json
+  totalBed       Int
+  status         RoomStatus
+  description    String         @db.VarChar
+  rent           String         @db.VarChar
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  payments       Payment[]      @relation("RoomPayments")
+  userProperties UserProperties @relation(fields: [propertyId], references: [id])
+  Tenant         Tenant[]
+}
+
+model Tenant {
+  id             Int            @id @default(autoincrement())
+  userId         Int
+  propertyId     Int
+  roomId         Int
+  status         TenantStatus
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  userProperties UserProperties @relation(fields: [propertyId], references: [id])
+  Rooms          Rooms          @relation(fields: [roomId], references: [id])
+  user           User           @relation(fields: [userId], references: [id])
+}
+
+model State {
+  id             Int              @id @default(autoincrement())
+  stateName      String
+  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime         @default(now())
+  cities         City[]
+  users          User[]
+  userProperties UserProperties[]
+}
+
+model City {
+  id             Int              @id @default(autoincrement())
+  stateId        Int
+  cityName       String
+  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime         @default(now())
+  state          State            @relation(fields: [stateId], references: [id])
+  users          User[]
+  userProperties UserProperties[]
+}
+
+model Payment {
+  id                   Int            @id @default(autoincrement())
+  tenantId             Int
+  propertyId           Int
+  roomId               Int
+  amount               Float
+  currency             String         @default("INR")
+  razorpayOrderId      String?        @unique
+  razorpayPaymentId    String?        @unique
+  razorpaySignature    String?
+  status               PaymentStatus
+  paymentMethod        PaymentMethod?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  paymentMethodDetails String?
+  property             UserProperties @relation("PropertyPayments", fields: [propertyId], references: [id])
+  room                 Rooms          @relation("RoomPayments", fields: [roomId], references: [id])
+  tenant               User           @relation("TenantPayments", fields: [tenantId], references: [id])
+}
+
+enum PaymentStatus {
+  Pending
+  Authorized
+  Captured
+  Failed
+  Refunded
+}
+
+enum Status {
+  Active
+  Deleted
+  Invited
+}
+
+enum Roles {
+  SuperAdmin
+  Admin
+  Tenant
+}
+
+enum PropertyStatus {
+  Active
+  Inactive
+  Deleted
+}
+
+enum RoomStatus {
+  Available
+  Occupied
+  Deleted
+}
+
+enum PaymentMethod {
+  Cash
+  UPI
+}
+
+enum TenantStatus {
+  Active
+  Deleted
+}

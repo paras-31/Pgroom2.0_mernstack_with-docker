@@ -1,0 +1,82 @@
+/* Toast styling with proper text colors */
+
+/* Global toast styling - catch all toasts */
+[data-sonner-toast] {
+  background-color: #22c55e !important;
+  color: #000000 !important;
+  border: 1px solid #16a34a !important;
+}
+
+[data-sonner-toast] [data-description] {
+  color: #000000 !important;
+}
+
+/* Error toast styling */
+[data-sonner-toast][data-type="error"] {
+  background-color: #ef4444 !important;
+  color: #000000 !important;
+  border: 1px solid #dc2626 !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-description] {
+  color: #000000 !important;
+}
+
+/* Success toast styling */
+[data-sonner-toast][data-type="success"] {
+  background-color: #22c55e !important;
+  color: #000000 !important;
+  border: 1px solid #16a34a !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-description] {
+  color: #000000 !important;
+}
+
+/* Warning toast styling */
+[data-sonner-toast][data-type="warning"] {
+  background-color: #f59e0b !important;
+  color: #000000 !important;
+  border: 1px solid #d97706 !important;
+}
+
+[data-sonner-toast][data-type="warning"] [data-description] {
+  color: #000000 !important;
+}
+
+/* Info toast styling */
+[data-sonner-toast][data-type="info"] {
+  background-color: #3b82f6 !important;
+  color: #000000 !important;
+  border: 1px solid #2563eb !important;
+}
+
+[data-sonner-toast][data-type="info"] [data-description] {
+  color: #000000 !important;
+}
+
+/* Loading toast styling - multiple selectors to ensure it works */
+[data-sonner-toast][data-type="loading"],
+[data-sonner-toast][data-loading="true"],
+.sonner-loading,
+[data-sonner-toast]:has([data-icon]) {
+  background-color: #22c55e !important;
+  color: #000000 !important;
+  border: 1px solid #16a34a !important;
+}
+
+[data-sonner-toast][data-type="loading"] [data-description],
+[data-sonner-toast][data-loading="true"] [data-description],
+.sonner-loading [data-description],
+[data-sonner-toast]:has([data-icon]) [data-description] {
+  color: #000000 !important;
+}
+
+/* Additional loading toast selectors */
+[data-sonner-toast]:has([data-icon="loading"]),
+[data-sonner-toast]:has(.lucide-loader),
+[data-sonner-toast]:has(.animate-spin) {
+  background-color: #22c55e !important;
+  color: #000000 !important;
+  border: 1px solid #16a34a !important;
+}
