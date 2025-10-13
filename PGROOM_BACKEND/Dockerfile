@@ -13,6 +13,9 @@ RUN npm install && npm install prom-client
 # Copy the rest of your backend code
 COPY . .
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # ---------- Stage 2: Runtime stage ----------
 FROM node:18-alpine
 
