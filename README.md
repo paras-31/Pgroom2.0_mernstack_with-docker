@@ -1,8 +1,98 @@
+
 # PGROOM2.0 MERN Stack with Docker
+# PostgreSQL Setup & Verification
+
+This project uses PostgreSQL as the main database, running as a Docker container. Follow these steps to set up and verify PostgreSQL integration:
+
+### 1. Start PostgreSQL Docker Container
+
+Run the following command to start PostgreSQL using Docker:
+
+```sh
+docker run --name my-postgres --network pgroom-net -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=admin123 -e POSTGRES_DB=pgrooms -p 5432:5432 -d postgres:15
+```
+
+### 2. Update Backend .env Credentials
+
+Edit the `.env` file in `PGROOM_BACKEND/` to match the credentials used above:
+
+```env
+DB_HOST=my-postgres
+DB_PORT=5432
+DB_USER=admin
+DB_PASS=admin123
+DATABASE_NAME=pgrooms
+DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}
+```
+
+### 3. Verify PostgreSQL Connection
+
+After starting the backend container, check the logs or use API endpoints to confirm the backend connects to PostgreSQL successfully.
+
+You can also use Prisma commands to verify the connection:
+
+```sh
+npx prisma db pull
+npx prisma migrate status
+```
+
+Or use `psql` to connect manually:
+
+```sh
+psql -h localhost -U admin -d pgrooms
+```
+
+If you see a successful connection, your PostgreSQL setup is complete.
+
+---
+
+**Note:** The main branch for this repository is `prod_code`. All production-ready code and updates should be merged into this branch.
+
+## Main Branch
+
+**Note:** The main branch for this repository is `prod_code`. All production-ready code and updates should be merged into this branch.
 
 ## Overview
 
-PGROOM2.0 is a full-stack application featuring both frontend and backend codebases. The project leverages Docker for containerization, enabling seamless deployment and environment consistency. **Note:** This project uses PostgreSQL (not MongoDB) as the database.
+
+PGROOM2.0 is a full-stack application featuring both frontend and backend codebases. The project leverages Docker for containerization, enabling seamless deployment and environment consistency.
+
+## PostgreSQL Brief
+
+This project uses **PostgreSQL** as the primary database. PostgreSQL is a powerful, open-source relational database system known for its reliability, feature set, and performance. In PGROOM2.0, PostgreSQL is run as a Docker container, making setup and management easy and consistent across environments.
+
+### PostgreSQL with Docker
+
+- The PostgreSQL database is provided via the official Docker image (`postgres:15`).
+- Credentials (host, port, user, password, database name) are configured in the backend `.env` file.
+- The backend connects to the PostgreSQL container using these credentials.
+
+#### Steps to Set Up PostgreSQL:
+
+1. **Start PostgreSQL Docker Container**
+        - Example command:
+            ```sh
+            docker run --name my-postgres --network pgroom-net -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=admin123 -e POSTGRES_DB=pgrooms -p 5432:5432 -d postgres:15
+            ```
+2. **Update Backend Credentials**
+        - Edit the `.env` file in `PGROOM_BACKEND/` to match the credentials used in the Docker command above:
+            ```env
+            DB_HOST=my-postgres
+            DB_PORT=5432
+            DB_USER=admin
+            DB_PASS=admin123
+            DATABASE_NAME=pgrooms
+            DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}
+            ```
+3. **Verify PostgreSQL Connection**
+        - Start the backend container and check the logs or use API endpoints to confirm the backend is able to connect to PostgreSQL successfully.
+        - You can also use tools like `psql` or Prisma commands to test the connection:
+            ```sh
+            npx prisma db pull
+            npx prisma migrate status
+            ```
+
+This ensures your backend is properly connected to the PostgreSQL database running in Docker.
 
 ---
 
@@ -17,6 +107,7 @@ PGROOM2.0 is a full-stack application featuring both frontend and backend codeba
 ## Docker Integration
 
 ### Why Docker?
+
 
 Docker allows you to package applications and dependencies into containers, ensuring consistent environments across development, testing, and production. In this project, both the frontend and backend are containerized, and the database (PostgreSQL) is also run as a Docker container.
 
@@ -105,22 +196,12 @@ docker run --env-file .env --network pgroom-net pgroom-prisma
 
 ## Database Configuration via Docker
 
-- The PostgreSQL database is run as a Docker container.
-- Credentials (host, port, user, password, database name) are set in the `.env` file of the backend.
-- Example `.env` configuration:
 
-```
-DB_HOST=my-postgres    # The container name of your PostgreSQL instance
-DB_PORT=5432
-DB_USER=admin
-DB_PASS=admin123
-DATABASE_NAME=pgrooms
+**PostgreSQL Setup Recap:**
 
-DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}
-```
-
-- Here, `my-postgres` refers to the name of the database container (as defined when running the container and in your Docker network).
-- The backend connects to this database using the credentials provided in `.env`.
+- PostgreSQL runs as a Docker container using the official image.
+- Credentials are set in the backend `.env` file and should match the Docker container environment variables.
+- The backend connects to the database using these credentials, referencing the container name as the host.
 
 ---
 
@@ -141,10 +222,13 @@ DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DATABASE
 
 ## Summary
 
+
 - **Docker** is used to containerize the frontend, backend, and database for consistent deployment.
 - **Custom Docker network** allows containers to communicate securely and reliably by name.
 - **Two Dockerfiles** in the backend: one for the app, one for Prisma migrations.
 - **Prisma** manages database schema and migrations, with dedicated Docker support.
 - **.env** file stores database credentials, referencing the Dockerized PostgreSQL instance.
+- **PostgreSQL** is run as a Docker container, and credentials are updated in the backend `.env` file for connectivity.
+- **prod_code** is the main branch for production-ready code.
 
 This setup ensures a robust, scalable, and maintainable development and deployment workflow for PGROOM2.0.
