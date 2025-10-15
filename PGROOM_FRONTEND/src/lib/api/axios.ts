@@ -11,7 +11,7 @@ interface ApiErrorResponse {
 }
 
 // Define base API URL - can be moved to environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://backend_con_pgrooms:8000';
 
 // Create Axios instance with default config
 const axiosInstance: AxiosInstance = axios.create({

@@ -126,7 +126,7 @@ export const roomService = {
   updateRoom: async (formData: FormData): Promise<ApiResponse<Room>> => {
     try {
       // Use custom fetch to handle FormData with multipart/form-data
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://backend_con_pgrooms:8000';
       const token = getDecryptedToken();
 
       const response = await fetch(`${API_BASE_URL}${endpoints.ROOM.UPDATE}`, {
