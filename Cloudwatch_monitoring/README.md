@@ -1,5 +1,4 @@
 # Docker Container Monitoring with AWS CloudWatch
-
 ---
 
 ## 📋 Table of Contents
