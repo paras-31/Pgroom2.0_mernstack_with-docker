@@ -16,47 +16,67 @@
 ## 🎯 Overview
 This guide provides complete instructions to set up monitoring for Docker containers using AWS CloudWatch. The setup collects:
 
-Container Metrics: CPU, memory, network usage for each Docker container
 
-System Metrics: Host machine CPU, memory, disk, network usage
+**What this setup collects:**
+- **Container Metrics:** CPU, memory, network usage for each Docker container
+- **System Metrics:** Host machine CPU, memory, disk, network usage
+- **Container Logs:** Application logs from all Docker containers
+- **Centralized Monitoring:** All data sent to AWS CloudWatch for visualization and alerting
 
-Container Logs: Application logs from all Docker containers
+---
 
-Centralized Monitoring: All data sent to AWS CloudWatch for visualization and alerting
+### Why Monitor?
+- Detect performance issues before they affect users
+- Understand resource usage patterns
+- Troubleshoot application problems quickly
+- Capacity planning and optimization
 
-Why Monitor?
+---
 
-Detect performance issues before they affect users
+## 🔧 Prerequisites
 
-Understand resource usage patterns
+### 1. AWS Account Setup
 
-Troubleshoot application problems quickly
-
-Capacity planning and optimization
-
-🔧 Prerequisites
-1. AWS Account Setup
-bash
-# Install AWS CLI (if not already installed)
+Install AWS CLI (if not already installed):
+```bash
 sudo apt update
 sudo apt install awscli -y
+```
 
-# Configure AWS credentials
+Configure AWS credentials:
+```bash
 aws configure
+```
 Enter these details when prompted:
+- **AWS Access Key ID:** `[Your AWS Access Key]`
+- **AWS Secret Access Key:** `[Your AWS Secret Key]`
+- **Default region:** `[e.g., us-east-1, eu-west-1]`
+- **Default output format:** `json`
 
-AWS Access Key ID: [Your AWS Access Key]
+> CloudWatch agent needs AWS credentials to send metrics and logs to your AWS account.
 
-AWS Secret Access Key: [Your AWS Secret Key]
-
-Default region: [e.g., us-east-1, eu-west-1]
-
-Default output format: json
-
-Why? CloudWatch agent needs AWS credentials to send metrics and logs to your AWS account.
-
-2. Required IAM Permissions
+### 2. Required IAM Permissions
 Ensure your AWS user has these permissions in IAM:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricData",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogStream",
+        "logs:CreateLogGroup"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+> These permissions allow the agent to create log groups and send metrics to CloudWatch.
 
 json
 {
