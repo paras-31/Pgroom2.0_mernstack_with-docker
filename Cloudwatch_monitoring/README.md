@@ -1,22 +1,20 @@
-Docker Container Monitoring with AWS CloudWatch
-📋 Table of Contents
-Overview
+# Docker Container Monitoring with AWS CloudWatch
 
-Prerequisites
+---
 
-Installation Steps
+## 📋 Table of Contents
+1. [Overview](#overview)
+2. [Prerequisites](#prerequisites)
+3. [Installation Steps](#installation-steps)
+4. [Configuration Files](#configuration-files)
+5. [Verification](#verification)
+6. [Troubleshooting](#troubleshooting)
+7. [Monitoring Dashboard](#monitoring-dashboard)
+8. [Maintenance](#maintenance)
 
-Configuration Files
+---
 
-Verification
-
-Troubleshooting
-
-Monitoring Dashboard
-
-Maintenance
-
-🎯 Overview
+## 🎯 Overview
 This guide provides complete instructions to set up monitoring for Docker containers using AWS CloudWatch. The setup collects:
 
 Container Metrics: CPU, memory, network usage for each Docker container
