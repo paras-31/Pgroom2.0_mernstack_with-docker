@@ -513,5 +513,94 @@ done
 echo "$(date): Completed sending container metrics"
 ```
 
+### Agent-only metrics configuration
+
+If you don't want to use the metrics script, you can use the CloudWatch Agent configuration below to collect metrics for all containers running inside Docker.
+
+```json
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+    "region": "us-east-1",
+    "debug": false
+  },
+  "metrics": {
+    "namespace": "DockerContainers",
+    "aggregation_dimensions": [["Hostname"], ["Hostname", "ContainerName"]],
+    "metrics_collected": {
+      "docker": {
+        "measurement": [
+          "container_cpu_usage_percent",
+          "container_memory_usage",
+          "container_memory_max_usage"
+        ],
+        "metrics_collection_interval": 30,
+        "totalcpu": true,
+        "perdevice": true
+      },
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "metrics_collection_interval": 30
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 30
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/lib/docker/containers/1daf2aff34b0*/*-json.log",
+            "log_group_name": "DockerOnPrem/Infrastructure/Monitoring",
+            "log_stream_name": "cadvisor",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/7bf791c11710*/*-json.log",
+            "log_group_name": "DockerOnPrem/Infrastructure/Monitoring",
+            "log_stream_name": "prometheus",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/63b93a70efea*/*-json.log",
+            "log_group_name": "DockerOnPrem/Applications/PGRooms",
+            "log_stream_name": "backend",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/5e11f46e967f*/*-json.log",
+            "log_group_name": "DockerOnPrem/Applications/PGRooms",
+            "log_stream_name": "pgroom-app",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/0e78209cb90d*/*-json.log",
+            "log_group_name": "DockerOnPrem/Applications/PGRooms",
+            "log_stream_name": "prism",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/496426e8dc94*/*-json.log",
+            "log_group_name": "DockerOnPrem/Data/Databases",
+            "log_stream_name": "postgresql",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
 
 
