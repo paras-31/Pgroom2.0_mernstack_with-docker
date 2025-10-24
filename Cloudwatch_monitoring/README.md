@@ -1,467 +1,481 @@
-# Docker Container Monitoring with AWS CloudWatch
----
+CloudWatch Monitoring Setup for On-Premise Docker Containers
+📋 Overview
+This guide provides complete setup instructions for monitoring Docker containers running on an on-premise Ubuntu server using AWS CloudWatch. The setup includes:
 
-## 📋 Table of Contents
-1. [Overview](#overview)
-2. [Prerequisites](#prerequisites)
-3. [Installation Steps](#installation-steps)
-4. [Configuration Files](#configuration-files)
-5. [Verification](#verification)
-6. [Troubleshooting](#troubleshooting)
-7. [Monitoring Dashboard](#monitoring-dashboard)
-8. [Maintenance](#maintenance)
+✅ Container logs collection with separate log streams
 
----
+✅ Container metrics (CPU, memory, network)
 
-## 🎯 Overview
-This guide provides complete instructions to set up monitoring for Docker containers using AWS CloudWatch. The setup collects:
+✅ Host-level metrics (CPU, memory, disk)
 
+✅ Automated monitoring via cron jobs
 
-**What this setup collects:**
-- **Container Metrics:** CPU, memory, network usage for each Docker container
-- **System Metrics:** Host machine CPU, memory, disk, network usage
-- **Container Logs:** Application logs from all Docker containers
-- **Centralized Monitoring:** All data sent to AWS CloudWatch for visualization and alerting
+✅ Real-time dashboards in CloudWatch
 
----
+🚀 Prerequisites
+Ubuntu server with Docker installed
 
-### Why Monitor?
-- Detect performance issues before they affect users
-- Understand resource usage patterns
-- Troubleshoot application problems quickly
-- Capacity planning and optimization
+AWS account with CloudWatch access
 
----
+AWS CLI configured with appropriate permissions
 
-## 🔧 Prerequisites
-
-### 1. AWS Account Setup
-
-Install AWS CLI (if not already installed):
-```bash
-sudo apt update
-sudo apt install awscli -y
-```
-
-Configure AWS credentials:
-```bash
-aws configure
-```
-Enter these details when prompted:
-- **AWS Access Key ID:** `[Your AWS Access Key]`
-- **AWS Secret Access Key:** `[Your AWS Secret Key]`
-- **Default region:** `[e.g., us-east-1, eu-west-1]`
-- **Default output format:** `json`
-
-> CloudWatch agent needs AWS credentials to send metrics and logs to your AWS account.
-
-### 2. Required IAM Permissions
-Ensure your AWS user has these permissions in IAM:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "cloudwatch:PutMetricData",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams",
-        "logs:DescribeLogGroups",
-        "logs:CreateLogStream",
-        "logs:CreateLogGroup"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
-> These permissions allow the agent to create log groups and send metrics to CloudWatch.
-
-json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "cloudwatch:PutMetricData",
-                "logs:PutLogEvents",
-                "logs:DescribeLogStreams",
-                "logs:DescribeLogGroups",
-                "logs:CreateLogStream",
-                "logs:CreateLogGroup"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-Why? These permissions allow the agent to create log groups and send metrics to CloudWatch.
-
-🚀 Installation Steps
-Step 1: Install CloudWatch Agent
+📥 Installation Steps
+1. Install CloudWatch Agent
 bash
-# Download CloudWatch agent package
-wget https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
-
-# Install the package
-sudo dpkg -i amazon-cloudwatch-agent.deb
+# Download and install CloudWatch agent
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+dpkg -i -E ./amazon-cloudwatch-agent.deb
 
 # Verify installation
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -v
-Why? CloudWatch agent is the software that collects and sends metrics/logs to AWS.
-
-Step 2: Create Configuration Directory
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -h
+2. Configure AWS Credentials
 bash
-# Create configuration directory
-sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+# Configure AWS CLI
+aws configure
+# Enter: AWS Access Key, Secret Key, Region (us-east-1), Output (json)
 
-# Create subdirectory for additional configs
-sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
-Why? The agent needs a dedicated directory for configuration files.
-
-Step 3: Create Common Configuration File
-bash
-sudo nano /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
-Add this content:
-
-toml
-[credentials]
-shared_credential_profile = "default"
-
-[logs]
-region = "us-east-1"  # Change to your preferred AWS region
-Why? This file contains common settings like AWS region and credential profile that are shared across configurations.
-
-Step 4: Create Main Configuration File
-bash
-sudo nano /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-Copy and paste this complete configuration:
+# Or set environment variables
+export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+export AWS_REGION=us-east-1
+⚙️ Configuration Files
+CloudWatch Agent Configuration
+Create file: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
 json
 {
   "agent": {
-    "metrics_collection_interval": 60,
-    "run_as_user": "root",
+    "region": "us-east-1",
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
   },
-  "logs": {
-    "logs_collected": {
-      "files": {
-        "collect_list": [
-          {
-            "file_path": "/var/lib/docker/containers/**/*.log",
-            "log_group_name": "DockerContainers",
-            "log_stream_name": "{container_name}",
-            "timestamp_format": "%Y-%m-%dT%H:%M:%S.%fZ",
-            "timezone": "UTC"
-          }
-        ]
-      }
-    }
-  },
   "metrics": {
+    "namespace": "DockerOnPrem",
     "metrics_collected": {
-      "docker": {
-        "measurement": [
-          "container_cpu_usage_percent",
-          "container_memory_usage_bytes",
-          "container_memory_max_usage_bytes",
-          "container_memory_rss",
-          "container_network_receive_bytes",
-          "container_network_transmit_bytes"
-        ],
-        "metrics_collection_interval": 60
-      },
       "cpu": {
         "measurement": [
-          "cpu_usage_idle",
-          "cpu_usage_iowait",
-          "cpu_usage_user",
-          "cpu_usage_system"
+          {"name": "cpu_usage_idle", "unit": "Percent"},
+          {"name": "cpu_usage_system", "unit": "Percent"},
+          {"name": "cpu_usage_user", "unit": "Percent"}
         ],
         "metrics_collection_interval": 60,
         "totalcpu": true
       },
       "mem": {
         "measurement": [
-          "mem_used_percent"
+          {"name": "mem_used_percent", "unit": "Percent"}
         ],
         "metrics_collection_interval": 60
       },
       "disk": {
         "measurement": [
-          "used_percent",
-          "inodes_free"
+          {"name": "used_percent", "unit": "Percent"}
         ],
         "metrics_collection_interval": 60,
-        "resources": [
-          "/",
-          "/var/lib/docker"
-        ]
-      },
-      "net": {
-        "measurement": [
-          "bytes_sent",
-          "bytes_recv",
-          "packets_sent",
-          "packets_recv"
-        ],
-        "metrics_collection_interval": 60
-      },
-      "swap": {
-        "measurement": [
-          "swap_used_percent"
-        ],
-        "metrics_collection_interval": 60
+        "resources": ["/"]
       }
-    },
-    "aggregation_dimensions": [
-      ["InstanceId"],
-      []
-    ],
-    "append_dimensions": {
-      "InstanceId": "${aws:InstanceId}"
     }
-  }
-}
-Step 5: Start CloudWatch Agent
-bash
-# Start agent in on-premise mode
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m onPremise -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-
-# Check agent status
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-Why on-premise mode? We're not running on AWS EC2, so we use on-premise mode which doesn't try to query EC2 metadata service.
-
-🔍 Configuration Explained
-What Each Section Does:
-1. Agent Configuration
-json
-"agent": {
-  "metrics_collection_interval": 60,  // Collect metrics every 60 seconds
-  "run_as_user": "root",              // Run with root privileges
-  "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"  // Agent's own logs
-}
-Why? Root privileges are needed to access system metrics and Docker daemon.
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/lib/docker/containers/1daf2aff34b0*/*-json.log",
+            "log_group_name": "DockerOnPrem/Infrastructure/Monitoring",
+            "log_stream_name": "cadvisor",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/7bf791c11710*/*-json.log",
+            "log_group_name": "DockerOnPrem/Infrastructure/Monitoring",
+            "log_stream_name": "prometheus",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/63b93a70efea*/*-json.log",
+            "log_group_name": "DockerOnPrem/Applications/PGRooms",
+            "log_stream_name": "backend",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/lib/docker/containers/5e11f46e967f*/*-json.log",
+            "log_group_name": "DockerOnPrem/Applications/PGRooms",
+            "log_stream_name": "pgroom-app",
+            "timezone": "UTC"
+          },
+          {
+            ## CloudWatch Monitoring for On-Premise Docker Containers
+
+            ### Overview
+
+            This document explains how to monitor Docker containers and host metrics on an on-premise Ubuntu server using the Amazon CloudWatch Agent and a small metrics script. It covers installation, configuration, deployment, verification, and troubleshooting.
+
+            ### Prerequisites
+
+            - Ubuntu server with Docker installed
+            - AWS account with CloudWatch access
+            - AWS CLI configured with credentials that have CloudWatch Logs and CloudWatch PutMetricData permissions
+
+            ---
+
+            ## Installation
+
+            1. Install the CloudWatch Agent
+
+            ```bash
+            # Download and install CloudWatch agent
+            wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+            sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+
+            # Verify installation
+            /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -h
+            ```
+
+            2. Configure AWS credentials (one of the options below)
+
+            ```bash
+            # Option A: interactive AWS CLI
+            aws configure
+            # Provide AWS Access Key, Secret Key, Region (e.g. us-east-1), Output (json)
+
+            # Option B: environment variables
+            export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+            export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+            export AWS_REGION=us-east-1
+            ```
+
+            ---
+
+            ## CloudWatch Agent Configuration
+
+            Create the CloudWatch Agent configuration file at `/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json` with the following content:
+
+            ```json
+            {
+              "agent": {
+                "region": "us-east-1",
+                "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+              },
+              "metrics": {
+                "namespace": "DockerOnPrem",
+                "metrics_collected": {
+                  "cpu": {
+                    "measurement": [
+                      { "name": "cpu_usage_idle", "unit": "Percent" },
+                      { "name": "cpu_usage_system", "unit": "Percent" },
+                      { "name": "cpu_usage_user", "unit": "Percent" }
+                    ],
+                    "metrics_collection_interval": 60,
+                    "totalcpu": true
+                  },
+                  "mem": {
+                    "measurement": [
+                      { "name": "mem_used_percent", "unit": "Percent" }
+                    ],
+                    "metrics_collection_interval": 60
+                  },
+                  "disk": {
+                    "measurement": [
+                      { "name": "used_percent", "unit": "Percent" }
+                    ],
+                    "metrics_collection_interval": 60,
+                    "resources": ["/"]
+                  }
+                }
+              },
+              "logs": {
+                "logs_collected": {
+                  "files": {
+                    "collect_list": [
+                      {
+                        "file_path": "/var/lib/docker/containers/1daf2aff34b0*/*-json.log",
+                        "log_group_name": "DockerOnPrem/Infrastructure/Monitoring",
+                        "log_stream_name": "cadvisor",
+                        "timezone": "UTC"
+                      },
+                      {
+                        "file_path": "/var/lib/docker/containers/7bf791c11710*/*-json.log",
+                        "log_group_name": "DockerOnPrem/Infrastructure/Monitoring",
+                        "log_stream_name": "prometheus",
+                        "timezone": "UTC"
+                      },
+                      {
+                        "file_path": "/var/lib/docker/containers/63b93a70efea*/*-json.log",
+                        "log_group_name": "DockerOnPrem/Applications/PGRooms",
+                        "log_stream_name": "backend",
+                        "timezone": "UTC"
+                      },
+                      {
+                        "file_path": "/var/lib/docker/containers/5e11f46e967f*/*-json.log",
+                        "log_group_name": "DockerOnPrem/Applications/PGRooms",
+                        "log_stream_name": "pgroom-app",
+                        "timezone": "UTC"
+                      },
+                      {
+                        "file_path": "/var/lib/docker/containers/0e78209cb90d*/*-json.log",
+                        "log_group_name": "DockerOnPrem/Applications/PGRooms",
+                        "log_stream_name": "prism",
+                        "timezone": "UTC"
+                      },
+                      {
+                        "file_path": "/var/lib/docker/containers/496426e8dc94*/*-json.log",
+                        "log_group_name": "DockerOnPrem/Data/Databases",
+                        "log_stream_name": "postgresql",
+                        "timezone": "UTC"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            ```
+
+            Configuration notes:
+
+            - `region` is the AWS region where metrics/logs are sent.
+            - `namespace` groups host metrics under `DockerOnPrem`.
+            - `logs.collect_list` uses container ID patterns to match Docker log files and route them to logical CloudWatch Log Groups and Streams.
+
+            ---
+
+            ## Container Metrics Script
+
+            Create `/usr/local/bin/send-container-metrics.sh` with the following content and make it executable.
+
+            ```bash
+            #!/bin/bash
+
+            echo "$(date): Starting container metrics collection"
+
+            # Container count
+            CONTAINER_COUNT=$(docker ps -q | wc -l)
+            aws cloudwatch put-metric-data \
+              --namespace "DockerContainers" \
+              --metric-name "ContainerCount" \
+              --value $CONTAINER_COUNT \
+              --unit "Count" \
+              --dimensions Hostname=$(hostname) \
+              --region us-east-1
+            echo "Container count: $CONTAINER_COUNT"
+
+            # Get detailed container stats
+            docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}" | tail -n +2 | while read line; do
+              if [ -n "$line" ]; then
+                name=$(echo "$line" | awk '{print $1}')
+                cpu=$(echo "$line" | awk '{print $2}' | sed 's/%//')
+                mem_usage=$(echo "$line" | awk '{print $3}')
+
+                # Parse memory value and convert GiB to MiB when needed
+                mem_value=$(echo "$mem_usage" | sed 's/MiB//' | sed 's/GiB//' | awk '{print $1}')
+                if echo "$mem_usage" | grep -q "GiB"; then
+                  mem_value=$(echo "$mem_value * 1024" | bc 2>/dev/null || echo "$mem_value")
+                fi
+
+                # Send CPU utilization
+                if [ -n "$cpu" ] && [ "$cpu" != "0.00" ]; then
+                  aws cloudwatch put-metric-data \
+                    --namespace "DockerContainers" \
+                    --metric-name "CPUUtilization" \
+                    --value $cpu \
+                    --unit "Percent" \
+                    --dimensions Hostname=$(hostname),ContainerName=$name \
+                    --region us-east-1
+                fi
+
+                # Send memory usage
+                if [ -n "$mem_value" ] && [ "$mem_value" != "0" ]; then
+                  aws cloudwatch put-metric-data \
+                    --namespace "DockerContainers" \
+                    --metric-name "MemoryUsage" \
+                    --value $mem_value \
+                    --unit "Megabytes" \
+                    --dimensions Hostname=$(hostname),ContainerName=$name \
+                    --region us-east-1
+                fi
+
+                echo "Processed: $name (CPU: ${cpu}%, Memory: ${mem_value}MB)"
+              fi
+            done
+
+            echo "$(date): Container metrics collection completed"
+            ```
+
+            Make it executable:
+
+            ```bash
+            sudo chmod +x /usr/local/bin/send-container-metrics.sh
+            ```
+
+            ---
+
+            ## Deployment
+
+            1. Start or reload the CloudWatch Agent with the configuration file:
+
+            ```bash
+            sudo systemctl stop amazon-cloudwatch-agent || true
+            sudo pkill -f cloudwatch-agent || true
+
+            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+              -a fetch-config -m onPremise -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
+            sudo systemctl status amazon-cloudwatch-agent --no-pager
+            ```
+
+            2. Schedule the metrics script to run (every 2 minutes example):
+
+            ```bash
+            (crontab -l 2>/dev/null; echo "*/2 * * * * /usr/local/bin/send-container-metrics.sh >> /var/log/container-metrics.log 2>&1") | crontab -
+            sudo touch /var/log/container-metrics.log
+            sudo chown $(whoami) /var/log/container-metrics.log
+            ```
+
+            ---
+
+            ## Verification Steps
+
+            1. Check agent status and logs:
+
+            ```bash
+            sudo systemctl status amazon-cloudwatch-agent
+            tail -n 200 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            ```
+
+            2. Verify container log files exist and are readable:
+
+            ```bash
+            docker ps --format "{{.Names}}" | while read container; do
+              container_id=$(docker inspect -f '{{.Id}}' $container)
+              echo "Container: $container"
+              find /var/lib/docker/containers/ -name "*${container_id}*-json.log" 2>/dev/null | while read file; do
+                echo "  Log file: $(basename $file)"
+                echo "  Size: $(stat --printf="%s" $file) bytes"
+              done
+            done
+            ```
+
+            3. Generate a test log entry in each container (optional):
+
+            ```bash
+            for container in $(docker ps --format "{{.Names}}"); do
+              docker exec $container sh -c "echo 'TEST: CloudWatch verification log from $container at $(date)'" 2>/dev/null || true
+            done
+            ```
+
+            4. Run the metrics script manually to confirm metrics are sent:
+
+            ```bash
+            /usr/local/bin/send-container-metrics.sh
+            tail -n 200 /var/log/container-metrics.log
+            ```
+
+            5. Inspect CloudWatch (allow 5–10 minutes for data to appear):
+
+            ```bash
+            aws logs describe-log-groups --log-group-name-prefix "DockerOnPrem" --region us-east-1 --output table
+
+            for log_group in "DockerOnPrem/Infrastructure/Monitoring" "DockerOnPrem/Applications/PGRooms" "DockerOnPrem/Data/Databases"; do
+              echo "=== $log_group ==="
+              aws logs describe-log-streams --log-group-name "$log_group" --region us-east-1 --output table 2>/dev/null || echo "No streams yet"
+            done
+
+            aws cloudwatch list-metrics --namespace "DockerOnPrem" --region us-east-1 --output table | head -n 20
+            aws cloudwatch list-metrics --namespace "DockerContainers" --region us-east-1 --output table | head -n 20
+            ```
+
+            ---
+
+            ## Example CloudWatch Dashboard (JSON)
+
+            Create a dashboard JSON (example) to visualize container CPU utilization.
+
+            ```json
+            {
+              "widgets": [
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 0,
+                  "width": 12,
+                  "height": 6,
+                  "properties": {
+                    "metrics": [
+                      [ "DockerContainers", "CPUUtilization", "ContainerName", "pgroom-con" ],
+                      [ "...", "backend_con_pgrooms" ],
+                      [ "...", "cadvisor" ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "us-east-1",
+                    "period": 300,
+                    "title": "Container CPU %"
+                  }
+                }
+              ]
+            }
+            ```
+
+            Put the dashboard in CloudWatch:
+
+            ```bash
+            aws cloudwatch put-dashboard --dashboard-name "DockerMonitoring" --dashboard-body file:///tmp/dashboard.json --region us-east-1
+            ```
+
+            ---
+
+            ## Troubleshooting
+
+            - Agent not starting:
+
+            ```bash
+            sudo journalctl -u amazon-cloudwatch-agent.service -n 50
+            tail -n 200 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            ```
+
+            - No logs in CloudWatch:
+
+            ```bash
+            # Ensure container IDs in the config match running containers
+            docker ps --format "{{.ID}}\t{{.Names}}"
+
+            # Check Docker log file permissions
+            ls -l /var/lib/docker/containers/*/*-json.log
+            ```
+
+            - JSON configuration validation:
+
+            ```bash
+            python3 -m json.tool /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+            ```
+
+            - Script troubleshooting:
+
+            ```bash
+            crontab -l
+            tail -n 200 /var/log/container-metrics.log
+            ```
+
+            ---
+
+            ## Maintenance
+
+            - Monitor the CloudWatch Agent logs regularly.
+            - Update container ID patterns in the CloudWatch Agent config if containers are recreated.
+            - Review CloudWatch costs and retention settings in the AWS Console.
+            - Rotate or truncate `/var/log/container-metrics.log` periodically to avoid disk growth.
+
+            ---
+
+            ## Notes
+
+            - Container IDs used in the example config are placeholders. Use current container IDs or patterns that match your environment.
+            - The metrics script example sends metrics every 2 minutes via cron; adjust frequency according to your needs and cost considerations.
+
+            ---
+
+            ## Support
+
+            If you encounter issues, start by checking the agent logs and verifying AWS permissions for CloudWatch Logs and CloudWatch metrics.
 
-2. Logs Configuration
-json
-"logs": {
-  "logs_collected": {
-    "files": {
-      "collect_list": [
-        {
-          "file_path": "/var/lib/docker/containers/**/*.log",  // Docker container log location
-          "log_group_name": "DockerContainers",                // CloudWatch log group name
-          "log_stream_name": "{container_name}",               // Use container name as stream name
-          "timestamp_format": "%Y-%m-%dT%H:%M:%S.%fZ",         // Standard timestamp format
-          "timezone": "UTC"                                    // Use UTC timezone
-        }
-      ]
-    }
-  }
-}
-Why this path? Docker stores container logs in /var/lib/docker/containers/ by default.
 
-3. Metrics Configuration
-Docker Metrics:
-
-container_cpu_usage_percent: CPU usage as percentage
-
-container_memory_usage_bytes: Actual memory used
-
-container_memory_rss: Resident Set Size memory
-
-container_network_receive_bytes: Network incoming traffic
-
-container_network_transmit_bytes: Network outgoing traffic
-
-System Metrics:
-
-CPU: Overall system CPU utilization
-
-Memory: Total system memory usage
-
-Disk: Root filesystem and Docker storage
-
-Network: System-wide network traffic
-
-Swap: Swap space usage
-
-✅ Verification Steps
-1. Check Agent Status
-bash
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-Expected Output:
-
-text
-{
-  "status": "running",
-  "starttime": "2025-01-21T10:43:13+00:00",
-  "version": "1.300033.0"
-}
-2. Check Agent Logs
-bash
-# View real-time agent logs
-sudo tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
-Look for these success messages:
-
-"Config validation passed"
-
-"Starting Amazon CloudWatch Agent"
-
-No ERROR messages
-
-3. Verify Docker Integration
-bash
-# Check running containers
-docker ps
-
-# Check real-time container stats
-docker stats
-
-# Verify container log files exist
-sudo find /var/lib/docker/containers/ -name "*.log" | head -5
-4. Verify in AWS CloudWatch Console
-Logs Verification:
-
-Go to CloudWatch → Log groups
-
-Look for "DockerContainers" log group
-
-Inside, you should see log streams for each container
-
-Metrics Verification:
-
-Go to CloudWatch → Metrics
-
-Look for "CWAgent" namespace
-
-You should see Docker and system metrics
-
-🐛 Troubleshooting Guide
-Common Issues and Solutions
-Issue 1: Agent Fails to Start
-bash
-# Check detailed status
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status -v
-
-# Check configuration errors
-sudo tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log | grep -i error
-Solution: Check AWS credentials and configuration file syntax.
-
-Issue 2: No Docker Metrics
-bash
-# Check if Docker is running
-sudo systemctl status docker
-
-# Check Docker socket permissions
-sudo ls -la /var/run/docker.sock
-
-# Test Docker API
-docker ps
-Solution: Ensure Docker is running and the agent has access to Docker socket.
-
-Issue 3: No Logs in CloudWatch
-bash
-# Check if container logs exist
-sudo find /var/lib/docker/containers/ -name "*.log" | wc -l
-
-# Check container log configuration
-docker inspect <container_name> | grep -A 10 LogConfig
-Solution: Verify Docker is using JSON-file logging driver.
-
-Issue 4: AWS Permission Errors
-bash
-# Test AWS connectivity
-aws cloudwatch list-metrics --namespace AWS/Logs --max-items 1
-
-# Check AWS credentials
-aws sts get-caller-identity
-Solution: Verify IAM permissions and AWS credentials.
-
-📊 Monitoring Dashboard
-Creating CloudWatch Dashboard
-Go to CloudWatch → Dashboards → Create dashboard
-
-Add widgets for:
-
-Container CPU Usage
-
-Container Memory Usage
-
-System Resources
-
-Log Insights
-
-Sample Dashboard Queries
-Container CPU Usage:
-
-text
-SEARCH('{CWAgent,ContainerName} MetricName="container_cpu_usage_percent"', 'Average', 300)
-Container Memory Usage:
-
-text
-SEARCH('{CWAgent,ContainerName} MetricName="container_memory_usage_bytes"', 'Average', 300)
-System CPU:
-
-text
-SEARCH('{CWAgent} MetricName="cpu_usage_user"', 'Average', 300)
-🛠️ Maintenance
-Regular Checks
-bash
-# Check agent status weekly
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-
-# Monitor agent logs
-sudo tail -100 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
-
-# Check CloudWatch costs
-# Go to AWS Billing Console → Cost Explorer
-Updating Configuration
-bash
-# Stop agent
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
-
-# Update config file
-sudo nano /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-
-# Restart agent
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m onPremise -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-Log Rotation
-CloudWatch handles log retention automatically. Configure retention policy in CloudWatch Log Groups:
-
-Default: Never expire
-
-Recommended: 30-90 days based on requirements
-
-📝 Summary
-This setup provides:
-
-✅ Real-time monitoring of all Docker containers
-
-✅ System-level resource monitoring
-
-✅ Centralized logging in CloudWatch
-
-✅ Scalable and managed solution
-
-✅ Cost-effective monitoring (pay for what you use)
-
-The monitoring data will help you:
-
-Identify performance bottlenecks
-
-Troubleshoot application issues
-
-Plan capacity requirements
-
-Maintain system health
-
-For additional help, refer to:
-
-AWS CloudWatch Agent Documentation
-
-Docker Logging Drivers
 
